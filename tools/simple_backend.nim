@@ -21,11 +21,9 @@ proc handle_client(client: Socket) =
   
   var buffer: array[4096, char]
   try:
-    while true:
-      let bytes_read = client.recv(addr buffer[0], 4096)
-      if bytes_read <= 0:
-        break
-      
+    # read once and respond (no loop)
+    let bytes_read = client.recv(addr buffer[0], 4096)
+    if bytes_read > 0:
       # convert buffer to string
       var data = newString(bytes_read)
       for index in 0..<bytes_read:
@@ -36,6 +34,9 @@ proc handle_client(client: Socket) =
       # echo back with prefix including port number
       let response = "backend_" & $backend_port & ": " & data
       discard client.send(response.cstring, response.len)
+      echo "[backend] sent response"
+    else:
+      echo "[backend] no data received"
       
   except:
     echo "[backend] error: ", getCurrentExceptionMsg()
