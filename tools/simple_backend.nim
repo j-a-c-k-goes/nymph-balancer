@@ -2,7 +2,7 @@
 
 import std/net
 
-import std/os
+import std/[os, strutils]
 
 var
   backend_port = 9000     # default port
