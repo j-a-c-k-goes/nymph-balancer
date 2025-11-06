@@ -1,0 +1,10 @@
+# nymph-balancer configuration example
+# copy to config.yaml and modify as needed
+
+balancer:
+  listen_port: 8080
+  listen_host: "0.0.0.0"
+
+backend:
+  host: "127.0.0.1"
+  port: 9000

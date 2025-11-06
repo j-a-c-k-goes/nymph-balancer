@@ -9,7 +9,7 @@ an experiment in building a tcp load balancer from first principles using nim.
 **phase-a: tcp proxy** (in progress)  
 - [x] a.0: project setup, structure
 - [x] a.1: accept single connection, forward to 1 backend
-- [ ] a.2: add config file parsing (backend address)
+- [x] a.2: add config file parsing (backend address)
 - [ ] a.3: add basic logging
 - [ ] a.4: handle connection errors gracefully
 
@@ -40,7 +40,11 @@ make test     # run tests
 
 ### usage
 ```bash
-# coming in phase-a.2 (config file support)
+# copy example config
+copy config.example.yaml config.yaml
+
+# edit config.yaml as needed
+# start balancer
 bin\nymph_balancer.exe
 ```
 

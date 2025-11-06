@@ -20,10 +20,12 @@ phase-a implements a basic tcp proxy that forwards connections from clients to a
   - tested with telnet - works correctly
   - client -> balancer:8080 -> backend:9000 -> response flow verified
 
-- [ ] **a.2**: add config file parsing (backend address)
-  - yaml/toml config support
+- [x] **a.2**: add config file parsing (backend address)
+  - simple yaml parser implemented
   - configurable backend host/port
-  - configurable listen port
+  - configurable listen host/port
+  - defaults if config file missing
+  - builds successfully
 
 - [ ] **a.3**: add basic logging
   - connection events
@@ -74,5 +76,5 @@ these will be addressed in subsequent milestones.
 
 ## next steps
 
-- test a.1 implementation
-- move to a.2 (config file parsing)
+- test a.2 implementation (config file parsing)
+- move to a.3 (basic logging)
