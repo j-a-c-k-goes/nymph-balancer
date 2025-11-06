@@ -3,12 +3,14 @@
 import std/[net, os]
 import ../config/config
 import ../logging/logger
+import backend_pool
 
 const
   VERSION = "0.1.0"
 
 var
   cfg: BalancerConfig     # global configuration
+  pool: BackendPool       # backend server pool
 
 proc forward_data(client: Socket, backend: Socket) =
   ## forward data from client to backend and back
@@ -56,6 +58,9 @@ proc handle_connection(client: Socket) =
   ## handle single client connection by forwarding to backend
   log_info("connection", "new client connected")
   
+  # get next backend from pool (round-robin)
+  let backend_info = pool.get_next_backend()
+  
   # connect to backend
   var backend = newSocket()
   try:
@@ -64,15 +69,15 @@ proc handle_connection(client: Socket) =
     
     # attempt connection with timeout handling
     try:
-      backend.connect(cfg.backend_host, Port(cfg.backend_port), timeout = cfg.connect_timeout)
-      log_info("connection", "connected to backend " & cfg.backend_host & ":" & $cfg.backend_port)
+      backend.connect(backend_info.host, Port(backend_info.port), timeout = cfg.connect_timeout)
+      log_info("connection", "connected to backend " & backend_info.host & ":" & $backend_info.port)
     except TimeoutError:
       log_error("connection", "backend connection timeout after " & $cfg.connect_timeout & "ms")
       client.close()
       backend.close()
       return
     except OSError:
-      log_error("connection", "backend unreachable: " & cfg.backend_host & ":" & $cfg.backend_port)
+      log_error("connection", "backend unreachable: " & backend_info.host & ":" & $backend_info.port)
       client.close()
       backend.close()
       return
@@ -92,8 +97,14 @@ proc start_balancer() =
   init_logger()
   cfg = load_config()
   
+  # initialize backend pool
+  pool = init_backend_pool()
+  for backend in cfg.backends:
+    pool.add_backend(backend.host, backend.port)
+  
   log_info("balancer", "nymph-balancer v" & VERSION)
-  log_info("balancer", "starting tcp proxy")
+  log_info("balancer", "starting round-robin load balancer")
+  log_info("balancer", "backend pool: " & $pool.backend_count() & " servers")
   
   var server = newSocket()
   server.setSockOpt(OptReuseAddr, true)
