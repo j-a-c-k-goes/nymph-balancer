@@ -36,10 +36,14 @@ phase-a implements a basic tcp proxy that forwards connections from clients to a
   - component-based logging
   - builds successfully
 
-- [ ] **a.4**: handle connection errors gracefully
-  - backend unreachable
-  - client disconnect
-  - timeout handling
+- [x] **a.4**: handle connection errors gracefully
+  - backend unreachable detection
+  - client disconnect handling
+  - timeout handling (connect and recv)
+  - specific error logging
+  - graceful recovery
+  - inline comments added to all modules
+  - builds successfully
 
 ## current implementation
 
@@ -78,7 +82,6 @@ telnet localhost 8080
 
 these will be addressed in subsequent milestones.
 
-## next steps
+## phase-a complete
 
-- test a.3 implementation (logging)
-- move to a.4 (handle connection errors gracefully)
+all milestones finished. ready for phase-b (round-robin).
