@@ -4,17 +4,21 @@ import std/[parseutils, strutils, os]
 
 type
   BalancerConfig* = object
-    listen_port*: int
-    listen_host*: string
-    backend_host*: string
-    backend_port*: int
+    listen_port*: int       # port to listen on
+    listen_host*: string    # host address to bind
+    backend_host*: string   # backend server address
+    backend_port*: int      # backend server port
+    connect_timeout*: int   # connection timeout (milliseconds)
+    recv_timeout*: int      # receive timeout (milliseconds)
 
 proc parse_yaml_simple(filepath: string): BalancerConfig =
   ## parse simple yaml config file
-  result.listen_port = 8080
+  result.listen_port = 8080 
   result.listen_host = "0.0.0.0"
   result.backend_host = "127.0.0.1"
   result.backend_port = 9000
+  result.connect_timeout = 5000
+  result.recv_timeout = 10000
   
   if not fileExists(filepath):
     echo "[config] file not found: ", filepath, ", using defaults"
@@ -45,6 +49,16 @@ proc parse_yaml_simple(filepath: string): BalancerConfig =
       let parts = trimmed.split(":")
       if parts.len >= 2:
         discard parseInt(parts[1].strip(), result.backend_port)
+    
+    elif "connect_timeout:" in trimmed:
+      let parts = trimmed.split(":")
+      if parts.len >= 2:
+        discard parseInt(parts[1].strip(), result.connect_timeout)
+    
+    elif "recv_timeout:" in trimmed:
+      let parts = trimmed.split(":")
+      if parts.len >= 2:
+        discard parseInt(parts[1].strip(), result.recv_timeout)
 
 proc load_config*(filepath: string = "config.yaml"): BalancerConfig =
   ## load configuration from yaml file

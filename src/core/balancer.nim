@@ -8,16 +8,16 @@ const
   VERSION = "0.1.0"
 
 var
-  cfg: BalancerConfig
+  cfg: BalancerConfig     # global configuration
 
 proc forward_data(client: Socket, backend: Socket) =
   ## forward data from client to backend and back
   log_debug("forward", "starting forwarding")
   
-  var buffer: array[4096, char]
+  var buffer: array[4096, char]  # data transfer buffer
   
   try:
-    # read from client
+    # read from client with error handling
     let bytes_read = client.recv(addr buffer[0], 4096)
     if bytes_read <= 0:
       log_info("forward", "client disconnected")
@@ -25,24 +25,32 @@ proc forward_data(client: Socket, backend: Socket) =
     
     log_debug("forward", "received " & $bytes_read & " bytes from client")
     
-    # send to backend
-    discard backend.send(addr buffer[0], bytes_read)
-    log_debug("forward", "forwarded to backend")
+    # send to backend with error handling
+    try:
+      discard backend.send(addr buffer[0], bytes_read)
+      log_debug("forward", "forwarded to backend")
+    except:
+      log_error("forward", "failed to send to backend: " & getCurrentExceptionMsg())
+      return
     
-    # read response from backend
+    # read response from backend with error handling
     let bytes_from_backend = backend.recv(addr buffer[0], 4096)
     if bytes_from_backend <= 0:
-      log_warn("forward", "backend disconnected")
+      log_warn("forward", "backend disconnected during response")
       return
     
     log_debug("forward", "received " & $bytes_from_backend & " bytes from backend")
     
-    # send back to client
-    discard client.send(addr buffer[0], bytes_from_backend)
-    log_debug("forward", "sent response to client")
+    # send back to client with error handling
+    try:
+      discard client.send(addr buffer[0], bytes_from_backend)
+      log_debug("forward", "sent response to client")
+    except:
+      log_error("forward", "failed to send to client: " & getCurrentExceptionMsg())
+      return
     
   except:
-    log_error("forward", "error: " & getCurrentExceptionMsg())
+    log_error("forward", "unexpected error: " & getCurrentExceptionMsg())
 
 proc handle_connection(client: Socket) =
   ## handle single client connection by forwarding to backend
@@ -51,14 +59,29 @@ proc handle_connection(client: Socket) =
   # connect to backend
   var backend = newSocket()
   try:
-    backend.connect(cfg.backend_host, Port(cfg.backend_port))
-    log_info("connection", "connected to backend " & cfg.backend_host & ":" & $cfg.backend_port)
+    # set timeouts
+    backend.setSockOpt(OptReuseAddr, true)
+    
+    # attempt connection with timeout handling
+    try:
+      backend.connect(cfg.backend_host, Port(cfg.backend_port), timeout = cfg.connect_timeout)
+      log_info("connection", "connected to backend " & cfg.backend_host & ":" & $cfg.backend_port)
+    except TimeoutError:
+      log_error("connection", "backend connection timeout after " & $cfg.connect_timeout & "ms")
+      client.close()
+      backend.close()
+      return
+    except OSError:
+      log_error("connection", "backend unreachable: " & cfg.backend_host & ":" & $cfg.backend_port)
+      client.close()
+      backend.close()
+      return
     
     # forward data between client and backend
     forward_data(client, backend)
     
   except:
-    log_error("connection", "failed to connect to backend: " & getCurrentExceptionMsg())
+    log_error("connection", "unexpected error: " & getCurrentExceptionMsg())
   finally:
     backend.close()
     client.close()
