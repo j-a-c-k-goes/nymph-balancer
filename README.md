@@ -13,6 +13,12 @@ an experiment in building a tcp load balancer from first principles using nim.
 - [x] a.3: add basic logging
 - [x] a.4: handle connection errors gracefully
 
+**phase-b: round-robin** (in progress)  
+- [x] b.1: backend_pool module (add/remove backends)
+- [x] b.2: round-robin algorithm implementation
+- [x] b.3: distribute connections across 3+ backends
+- [ ] b.4: benchmark: measure req/sec vs single backend
+
 ## what it does
 
 nymph-balancer distributes incoming tcp connections across multiple backend servers using various load balancing algorithms.
