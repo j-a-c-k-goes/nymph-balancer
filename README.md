@@ -10,7 +10,7 @@ an experiment in building a tcp load balancer from first principles using nim.
 - [x] a.0: project setup, structure
 - [x] a.1: accept single connection, forward to 1 backend
 - [x] a.2: add config file parsing (backend address)
-- [ ] a.3: add basic logging
+- [x] a.3: add basic logging
 - [ ] a.4: handle connection errors gracefully
 
 ## what it does

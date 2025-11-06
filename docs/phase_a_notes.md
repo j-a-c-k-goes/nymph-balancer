@@ -27,10 +27,14 @@ phase-a implements a basic tcp proxy that forwards connections from clients to a
   - defaults if config file missing
   - builds successfully
 
-- [ ] **a.3**: add basic logging
-  - connection events
-  - error logging
-  - log to file
+- [x] **a.3**: add basic logging
+  - connection events logged
+  - error logging implemented
+  - log to file (logs/balancer.log)
+  - log levels: INFO, WARN, ERROR, DEBUG
+  - timestamps on all entries
+  - component-based logging
+  - builds successfully
 
 - [ ] **a.4**: handle connection errors gracefully
   - backend unreachable
@@ -76,5 +80,5 @@ these will be addressed in subsequent milestones.
 
 ## next steps
 
-- test a.2 implementation (config file parsing)
-- move to a.3 (basic logging)
+- test a.3 implementation (logging)
+- move to a.4 (handle connection errors gracefully)
