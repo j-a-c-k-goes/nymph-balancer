@@ -2,8 +2,18 @@
 
 import std/net
 
-const
-  BACKEND_PORT = 9000
+import std/os
+
+var
+  backend_port = 9000     # default port
+
+proc parse_args() =
+  ## parse command line arguments for port
+  if paramCount() > 0:
+    try:
+      backend_port = parseInt(paramStr(1))
+    except:
+      echo "invalid port, using default: ", backend_port
 
 proc handle_client(client: Socket) =
   ## handle client connection with simple echo response
@@ -23,8 +33,8 @@ proc handle_client(client: Socket) =
       
       echo "[backend] received: ", data
       
-      # echo back with prefix
-      let response = "backend_response: " & data
+      # echo back with prefix including port number
+      let response = "backend_" & $backend_port & ": " & data
       discard client.send(response.cstring, response.len)
       
   except:
@@ -35,13 +45,15 @@ proc handle_client(client: Socket) =
 
 proc start_backend() =
   ## start simple backend server
+  parse_args()
+  
   echo "simple backend server"
-  echo "listening on port ", BACKEND_PORT
+  echo "listening on port ", backend_port
   echo ""
   
   var server = newSocket()
   server.setSockOpt(OptReuseAddr, true)
-  server.bindAddr(Port(BACKEND_PORT))
+  server.bindAddr(Port(backend_port))
   server.listen()
   
   echo "ready to accept connections"
