@@ -7,3 +7,5 @@ balancer:
 backend:
   host: "127.0.0.1"
   port: 9000
+  connect_timeout: 5000
+  recv_timeout: 10000

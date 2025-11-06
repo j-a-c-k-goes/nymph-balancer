@@ -6,12 +6,12 @@ an experiment in building a tcp load balancer from first principles using nim.
 
 ## status
 
-**phase-a: tcp proxy** (in progress)  
+**phase-a: tcp proxy** (complete)  
 - [x] a.0: project setup, structure
 - [x] a.1: accept single connection, forward to 1 backend
 - [x] a.2: add config file parsing (backend address)
 - [x] a.3: add basic logging
-- [ ] a.4: handle connection errors gracefully
+- [x] a.4: handle connection errors gracefully
 
 ## what it does
 

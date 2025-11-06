@@ -7,8 +7,8 @@ type
     INFO, WARN, ERROR, DEBUG
 
 var
-  log_file: File
-  log_enabled = false
+  log_file: File          # log file handle
+  log_enabled = false     # whether logging to file is active
 
 proc init_logger*(filepath: string = "logs/balancer.log") =
   ## initialize logger and open log file
