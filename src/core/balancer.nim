@@ -1,12 +1,13 @@
 # balancer: main load balancer logic
 
 import std/[net, os]
+import ../config/config
 
 const
   VERSION = "0.1.0"
-  LISTEN_PORT = 8080
-  BACKEND_HOST = "127.0.0.1"
-  BACKEND_PORT = 9000
+
+var
+  cfg: BalancerConfig
 
 proc forward_data(client: Socket, backend: Socket) =
   ## forward data from client to backend and back
@@ -49,8 +50,8 @@ proc handle_connection(client: Socket) =
   # connect to backend
   var backend = newSocket()
   try:
-    backend.connect(BACKEND_HOST, Port(BACKEND_PORT))
-    echo "[handle_connection] connected to backend ", BACKEND_HOST, ":", BACKEND_PORT
+    backend.connect(cfg.backend_host, Port(cfg.backend_port))
+    echo "[handle_connection] connected to backend ", cfg.backend_host, ":", cfg.backend_port
     
     # forward data between client and backend
     forward_data(client, backend)
@@ -64,17 +65,18 @@ proc handle_connection(client: Socket) =
 
 proc start_balancer() =
   ## start load balancer and accept connections
+  cfg = load_config()
+  echo ""
   echo "nymph-balancer v", VERSION
-  echo "starting tcp proxy on port ", LISTEN_PORT
-  echo "forwarding to backend ", BACKEND_HOST, ":", BACKEND_PORT
+  echo "starting tcp proxy"
   echo ""
   
   var server = newSocket()
   server.setSockOpt(OptReuseAddr, true)
-  server.bindAddr(Port(LISTEN_PORT))
+  server.bindAddr(Port(cfg.listen_port), cfg.listen_host)
   server.listen()
   
-  echo "listening on 0.0.0.0:", LISTEN_PORT
+  echo "listening on ", cfg.listen_host, ":", cfg.listen_port
   echo "waiting for connections..."
   echo ""
   
