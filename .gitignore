@@ -1,1 +1,30 @@
-experiment-concept.txt
+# nim
+nimcache/
+*.exe
+*.pdb
+*.ilk
+
+# build artifacts
+bin/*.exe
+src/**/*.exe
+tools/*.exe
+tests/*.exe
+
+# logs
+logs/*.log
+logs/*.txt
+
+# config (keep templates)
+*.local.yaml
+*.local.toml
+
+# editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# os
+.DS_Store
+Thumbs.db

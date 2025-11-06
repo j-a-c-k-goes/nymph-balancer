@@ -1,0 +1,219 @@
+# nymph-balancer -- load balancer implementation experiment
+
+goal is to implement a layer 4 load balancer from first principles.
+
+## what is a load balancer?
+
+a piece of network software which handles the distribution of incoming traffic to a host-group.
+
+note: in some flavors, load balancers act like firewalls.
+
+## basic load balancer schematic
+
+[incoming-traffic] --> [load-balancer] --> [ [destination-a-0000]|[destination-a-0001] ]
+
+### questions about stops in the schematic:
+
+  - what is incoming traffic defined as?
+    + tcp, http/https
+  
+  - do the destinations always need to be relative to one another?
+    + no. heterogeneous destinations are ok
+
+  - is load balancing done via:
+    + volume thresholds b/t destination options
+    + size of incoming traffic element
+    + (at least 4 modes of balancing, covered in following sections)
+  
+  - what happens when/if traffic cannot reach load balancer?
+    + this is a 'dead frontend', client timeout
+    + if load balancer cannot reach server (end-destination), this is a 'dead backend'
+
+  - how does traffic know to hit load balancer before end-destination?
+    + dns/config 
+    + note: out-of-scope for this experiment?
+    + but: could simulate partially (minimal network layer)
+
+## implementation language
+
+the load balancer is to be implemented in either of the following languages.
+
+these were selected for lightweight binary size, compiled-time benefitted speed.
+
+* nim (preferred)
+* c/c++ (fallback if nim implementation is irrational)
+
+## implementation phases
+
+* phase-a [TCP PROXY]
+- a.0: project setup, structure
+- a.1: accept single connection, forward to 1 backend
+- a.2: add config file parsing (backend address)
+- a.3: add basic logging
+- a.4: handle connection errors gracefully
+
+* phase-b [ROUND-ROBIN]
+- b.1: backend_pool module (add/remove backends)
+- b.2: round-robin algorithm implementation
+- b.3: distribute connections across 3+ backends
+- b.4: benchmark: measure req/sec vs single backend
+
+* phase-c [HEALTH CHECKS, RETRY]
+- c.1: health_checker module (periodic TCP probes)
+- c.2: mark backends as alive/dead
+- c.3: skip dead backends in round-robin
+- c.4: retry logic with configurable timeout
+- c.5: benchmark: measure uptime with simulated failures
+
+* phase-d [ADVANCED ALGORITHMS]
+- d.1: least-connections algorithm
+- d.2: weighted distribution (based on health metrics)
+- d.3: ip-hash (session persistence)
+- d.4: benchmark: compare all 4 algorithms
+
+## design components needed (in-progress)
+
+* core/
+  - balancer
+  - backend_pool
+  - health_checker
+  - algorithms
+* config/
+  - config
+* logging/
+  - logger
+* tools/
+  - traffic_simulator
+  - benchmark
+
+note: the above could have sub-components. 
+note: prefer to reduce module size, keep a clean architecture.
+
+## algorithm strategy
+
+b/c experiment, can play around with, implement several strategies
+
+  - round robin
+  - least connections (explores state tracking)
+  - weighted distribution (explores health metrics)
+  - ip hash (explores session persistence)
+
+## health check design
+
+* detecting dead backends
+  - this should be handled by a module
+  - 'dead' defined as unreachable
+  - can also simulate this in tests
+
+* retry/timeout strategy
+  - this should be configurable constant(s)
+
+* connection pooling versus per-request
+  - tradeoff/benefits of both
+
+## success metrics
+
+* requests per second 
+  - 500 requests per second [BASELINE]
+  - 2100 requests per second [TARGET]
+
+* concurrent connection goal
+  - 100 concurrent [BASELINE]
+  - 1000+ [TARGET] 
+
+* latency threshold
+  - <50ms [BASELINE]
+  - <8ms [TARGET]
+
+## protocol ambiguity
+'incoming traffic' covers tcp first; then http/https
+
+## coding style
+
+* <verb><delimiter=':'> <description>
+  + applies to self-documenting functions and actual comments
+* lowercase (even documentation)
+* ascii characters only, no emojiis
+  + applies to code, documentation, all files
+* avoids single character variable
+* prefer small modules over monoliths
+
+## possible applications
+
+### research and learning
+
+* algorithm studies
+  - benchmark round-robin vs least-connections vs weighted
+  - latency impact of different strategies
+  - connection distribution patterns
+
+* systems programming
+  - tcp socket programming
+  - concurrent connection handling
+  - state management across threads
+
+* performance engineering
+  - bottleneck identification methods
+  - optimization techniques (connection pooling, batching)
+  - profiling and instrumentation
+
+* distributed systems
+  - failure detection and recovery
+  - health monitoring patterns
+  - load distribution strategies
+
+### real-world applications
+
+* homelab
+  - distribute traffic across multiple raspberry pi servers
+  - load balance self-hosted services (plex, nextcloud, gitea)
+  - high availability for personal projects
+
+* development environments
+  - balance load across local docker containers
+  - test application behavior under distributed load
+  - simulate production infrastructure locally
+
+* small business
+  - distribute web traffic across 2-5 servers
+  - cost-effective alternative to cloud load balancers
+  - simple tcp proxy for database read replicas
+
+* microservices
+  - service mesh component (lightweight alternative to envoy)
+  - internal load balancing between services
+  - canary deployments (weighted distribution)
+
+* game servers
+  - distribute players across multiple game instances
+  - session persistence via ip-hash
+  - automatic failover when instance crashes
+
+* iot device management
+  - balance mqtt broker connections
+  - distribute sensor data across processing nodes
+  - handle thousands of lightweight tcp connections
+
+* database connection pooling
+  - distribute queries across read replicas
+  - weighted routing based on replica lag
+  - automatic removal of failed replicas
+
+* api gateway
+  - rate limiting per backend
+  - circuit breaker patterns
+  - backend health-based routing
+
+### production-scale considerations
+
+nymph-balancer targets 2100 req/sec (experimental scale).
+ 
+the patterns learned also apply to production tools:
+
+* haproxy: 10k+ req/sec, powers github, reddit, stack overflow
+* nginx: 50k+ req/sec, powers 30%+ of web traffic
+* envoy: cloud-native, powers lyft, airbnb service meshes
+
+the algorithms, health checks, and failure handling implemented here are aligned to production systems.
+
+just at 10-20% scale for learning purposes.
