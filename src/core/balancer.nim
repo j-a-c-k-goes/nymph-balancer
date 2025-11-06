@@ -1,6 +1,6 @@
 # balancer: main load balancer logic
 
-import std/[net, os]
+import std/[net, os, nativesockets]
 import ../config/config
 import ../logging/logger
 import backend_pool
@@ -35,7 +35,8 @@ proc forward_data(client: Socket, backend: Socket) =
       log_error("forward", "failed to send to backend: " & getCurrentExceptionMsg())
       return
     
-    # read response from backend with error handling
+    # read response from backend with error handling and timeout
+    backend.getFd().setSockOptInt(SOL_SOCKET, SO_RCVTIMEO, cfg.recv_timeout)
     let bytes_from_backend = backend.recv(addr buffer[0], 4096)
     if bytes_from_backend <= 0:
       log_warn("forward", "backend disconnected during response")
@@ -64,7 +65,7 @@ proc handle_connection(client: Socket) =
   # connect to backend
   var backend = newSocket()
   try:
-    # set timeouts
+    # set socket options and timeouts
     backend.setSockOpt(OptReuseAddr, true)
     
     # attempt connection with timeout handling
