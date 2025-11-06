@@ -3,11 +3,14 @@
 import std/[parseutils, strutils, os]
 
 type
+  BackendConfig* = object
+    host*: string           # backend server address
+    port*: int              # backend server port
+  
   BalancerConfig* = object
     listen_port*: int       # port to listen on
     listen_host*: string    # host address to bind
-    backend_host*: string   # backend server address
-    backend_port*: int      # backend server port
+    backends*: seq[BackendConfig]  # list of backend servers
     connect_timeout*: int   # connection timeout (milliseconds)
     recv_timeout*: int      # receive timeout (milliseconds)
 
@@ -15,8 +18,7 @@ proc parse_yaml_simple(filepath: string): BalancerConfig =
   ## parse simple yaml config file
   result.listen_port = 8080 
   result.listen_host = "0.0.0.0"
-  result.backend_host = "127.0.0.1"
-  result.backend_port = 9000
+  result.backends = @[]
   result.connect_timeout = 5000
   result.recv_timeout = 10000
   
@@ -40,15 +42,18 @@ proc parse_yaml_simple(filepath: string): BalancerConfig =
       if parts.len >= 2:
         result.listen_host = parts[1].strip().strip(chars = {'"', '\''})
     
-    elif "host:" in trimmed and "backend" notin trimmed:
+    elif trimmed.startsWith("- host:"):
       let parts = trimmed.split(":", 1)
       if parts.len >= 2:
-        result.backend_host = parts[1].strip().strip(chars = {'"', '\''})
+        let host = parts[1].strip().strip(chars = {'"', '\''})
+        result.backends.add(BackendConfig(host: host, port: 9000))
     
-    elif "port:" in trimmed and "listen" notin trimmed:
+    elif trimmed.startsWith("port:") and result.backends.len > 0:
       let parts = trimmed.split(":")
       if parts.len >= 2:
-        discard parseInt(parts[1].strip(), result.backend_port)
+        var port: int
+        if parseInt(parts[1].strip(), port) > 0:
+          result.backends[^1].port = port
     
     elif "connect_timeout:" in trimmed:
       let parts = trimmed.split(":")
@@ -65,4 +70,6 @@ proc load_config*(filepath: string = "config.yaml"): BalancerConfig =
   echo "[config] loading from: ", filepath
   result = parse_yaml_simple(filepath)
   echo "[config] listen: ", result.listen_host, ":", result.listen_port
-  echo "[config] backend: ", result.backend_host, ":", result.backend_port
+  echo "[config] backends: ", result.backends.len, " configured"
+  for backend in result.backends:
+    echo "[config]   - ", backend.host, ":", backend.port
