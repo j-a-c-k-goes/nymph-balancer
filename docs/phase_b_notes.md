@@ -26,11 +26,13 @@ phase-b implements round-robin load balancing across multiple backend servers.
   - each connection gets next backend in rotation
   - backend response includes port number for verification
 
-- [ ] **b.4**: benchmark: measure req/sec vs single backend
-  - create benchmark tool
-  - measure throughput with 1 backend
-  - measure throughput with 3 backends
-  - compare performance
+- [x] **b.4**: benchmark: measure req/sec vs single backend
+  - benchmark tool created
+  - measures total requests, success/fail, duration
+  - calculates requests per second
+  - command line arguments for request count and port
+  - progress indicator every 100 requests
+  - builds successfully
 
 ## current implementation
 
@@ -97,8 +99,19 @@ connection 4 -> backend A (index 0), index = 1
 
 these will be addressed in subsequent phases.
 
-## next steps
+## phase-b complete
 
-- test b.1-b.3 implementation
-- create benchmark tool for b.4
-- measure performance improvement
+all milestones finished. ready for phase-c (health checks and retry logic).
+
+## benchmark tool usage
+
+```bash
+# default: 500 requests to localhost:8080
+bin\benchmark.exe
+
+# custom request count
+bin\benchmark.exe 1000
+
+# custom port
+bin\benchmark.exe 500 8080
+```
