@@ -34,13 +34,27 @@ proc probe_backend(host: string, port: int): bool =
 
 proc health_check_thread(arg: pointer) {.thread, gcsafe.} =
   ## check: periodic health check thread
+  log_info("health", "health checker thread entry")
   let ctx = cast[ptr HealthCheckerContext](arg)
-  log_info("health", "health checker started")
+  log_info("health", "context cast complete")
+  
+  if ctx.isNil:
+    log_error("health", "context is nil")
+    return
+  
+  log_info("health", "checking running flag")
+  if ctx.running.isNil:
+    log_error("health", "running pointer is nil")
+    return
+  
+  log_info("health", "health checker started, running=" & $ctx.running[])
   
   while ctx.running[]:
+    log_info("health", "health check cycle starting")
     acquire(ctx.pool.lock)
     let backend_count = ctx.pool.backends.len
     release(ctx.pool.lock)
+    log_info("health", "checking " & $backend_count & " backends")
     
     for backend_index in 0..<backend_count:
       acquire(ctx.pool.lock)
