@@ -13,7 +13,7 @@ type
   BalancerState* = object
     server_socket: WinSocket           # listening socket
     connection_queue: ConnectionQueue  # pending connections
-    backend_pool: ptr BackendPool      # available backends
+    backend_pool: ptr BackendPool      # available backends (not copied, passed by pointer|reference)
     running: bool                      # shutdown flag
     stats_lock: Lock                   # stats thread safety
     total_connections: int             # lifetime connection count
