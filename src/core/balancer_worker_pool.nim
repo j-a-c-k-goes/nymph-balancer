@@ -1,6 +1,6 @@
 # balancer_worker_pool: manage load balancer worker pool
 
-import winsock_raw, backend_pool, connection_queue
+import winsock_raw, backend_pool, connection_queue, health_checker
 import ../logging/logger
 import std/[locks, times, os]
 
@@ -120,6 +120,10 @@ proc start_balancer*(listen_port: int, backend_pool: BackendPool) =
   log_info("balancer", "starting on port " & $listen_port)
   log_info("balancer", "worker threads: " & $WORKER_COUNT)
   log_info("balancer", "queue capacity: " & $QUEUE_CAPACITY)
+  
+  var health_thread = start_health_checker(addr global_state.backend_pool, addr global_state.running)
+  log_info("balancer", "health checker started")
+  
   var acceptor: Thread[pointer]
   createThread(acceptor, acceptor_thread, global_state)
   var workers: array[WORKER_COUNT, Thread[pointer]]
@@ -137,6 +141,7 @@ proc start_balancer*(listen_port: int, backend_pool: BackendPool) =
   joinThread(acceptor)
   for worker_index in 0..<WORKER_COUNT:
     joinThreads(workers[worker_index])
+  joinThread(health_thread)
   discard closesocket(global_state.server_socket)
   cleanup_winsock()
   dealloc(global_state)
