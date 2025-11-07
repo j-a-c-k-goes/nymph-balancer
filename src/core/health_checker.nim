@@ -18,9 +18,6 @@ proc probe_backend(host: string, port: int): bool =
   if sock == INVALID_SOCKET:
     return false
   
-  var timeout_val: cint = HEALTH_CHECK_TIMEOUT
-  discard setsockopt(sock, SOL_SOCKET, 0x1006, addr timeout_val, sizeof(timeout_val).cint)
-  
   var backend_addr = SockAddrIn(
     family: AF_INET.cushort,
     port: htons(port.cushort),
