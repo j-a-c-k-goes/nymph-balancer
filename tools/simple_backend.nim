@@ -35,14 +35,20 @@ proc handle_client(client: Socket) =
       let response = "backend_" & $backend_port & ": " & data
       discard client.send(response.cstring, response.len)
       echo "[backend] sent response"
+      
+      # close immediately after sending
+      client.close()
+      echo "[backend] client disconnected"
     else:
       echo "[backend] no data received"
+      client.close()
       
   except:
     echo "[backend] error: ", getCurrentExceptionMsg()
-  finally:
-    client.close()
-    echo "[backend] client disconnected"
+    try:
+      client.close()
+    except:
+      discard
 
 proc start_backend() =
   ## start simple backend server

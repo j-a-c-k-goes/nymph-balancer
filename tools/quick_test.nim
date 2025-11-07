@@ -6,9 +6,16 @@ proc test_connection(num: int): string =
   ## send single request and get response
   var client = newSocket()
   try:
+    echo "  [DEBUG] connecting..."
     client.connect("127.0.0.1", Port(8080), timeout = 5000)
+    
+    # disable Nagle's algorithm to send small packets immediately
+    client.setSockOpt(OptNoDelay, true)
+    
+    echo "  [DEBUG] connected, sending data..."
     let message = "test" & $num & "\n"
-    discard client.send(message.cstring, message.len)
+    let sent = client.send(message.cstring, message.len)
+    echo "  [DEBUG] sent ", sent, " bytes"
     
     var buffer: array[4096, char]
     let bytes_read = client.recv(addr buffer[0], 4096)
