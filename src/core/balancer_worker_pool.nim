@@ -1,6 +1,6 @@
 # balancer_worker_pool: manage load balancer worker pool
 
-import winsock_raw, backend_pool, connection_queue
+import winsock_raw, backend_pool, connection_queue, health_checker
 import ../logging/logger
 import std/[locks, times, os]
 
@@ -13,7 +13,7 @@ type
   BalancerState* = object
     server_socket: WinSocket           # listening socket
     connection_queue: ConnectionQueue  # pending connections
-    backend_pool: BackendPool          # available backends
+    backend_pool: ptr BackendPool      # available backends (not copied, passed by pointer|reference)
     running: bool                      # shutdown flag
     stats_lock: Lock                   # stats thread safety
     total_connections: int             # lifetime connection count
@@ -21,11 +21,11 @@ type
 
 var global_state: ptr BalancerState
 
-proc handle_connection(conn_data: ConnectionData, backend_pool: var BackendPool) {.gcsafe.} =
+proc handle_connection(conn_data: ConnectionData, backend_pool: ptr BackendPool) {.gcsafe.} =
   ## forward: proxy request to backend and return response
   let client_sock      = conn_data.client_socket
   let request_data     = conn_data.request_data
-  let selected_backend = backend_pool.get_next_backend()
+  let selected_backend = backend_pool[].get_next_backend()
   let backend_sock     = connect_to_backend(selected_backend.host, selected_backend.port)
   
   if backend_sock == INVALID_SOCKET:
@@ -106,7 +106,7 @@ proc acceptor_thread(arg: pointer) {.thread, gcsafe.} =
         log_warn("acceptor", "no data from client")
         discard closesocket(client_sock)
 
-proc start_balancer*(listen_port: int, backend_pool: BackendPool) =
+proc start_balancer*(listen_port: int, backend_pool: var BackendPool) =
   ## run: start balancer with worker pool architecture
   if not init_winsock():
     log_error("balancer", "failed to initialize winsock")
@@ -114,12 +114,16 @@ proc start_balancer*(listen_port: int, backend_pool: BackendPool) =
   global_state                  = cast[ptr BalancerState](alloc0(sizeof(BalancerState)))
   global_state.server_socket    = create_server_socket(listen_port)
   global_state.connection_queue = init_connection_queue(QUEUE_CAPACITY)
-  global_state.backend_pool     = backend_pool
+  global_state.backend_pool     = addr backend_pool
   global_state.running          = true
   initLock(global_state.stats_lock)
   log_info("balancer", "starting on port " & $listen_port)
   log_info("balancer", "worker threads: " & $WORKER_COUNT)
   log_info("balancer", "queue capacity: " & $QUEUE_CAPACITY)
+  
+  var health_thread = start_health_checker(global_state.backend_pool, addr global_state.running)
+  log_info("balancer", "health checker started")
+  
   var acceptor: Thread[pointer]
   createThread(acceptor, acceptor_thread, global_state)
   var workers: array[WORKER_COUNT, Thread[pointer]]
@@ -137,6 +141,7 @@ proc start_balancer*(listen_port: int, backend_pool: BackendPool) =
   joinThread(acceptor)
   for worker_index in 0..<WORKER_COUNT:
     joinThreads(workers[worker_index])
+  joinThread(health_thread)
   discard closesocket(global_state.server_socket)
   cleanup_winsock()
   dealloc(global_state)

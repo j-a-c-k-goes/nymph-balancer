@@ -1,7 +1,4 @@
-# connection_queue: model implementatio of connection ring
-
 import locks, winsock_raw
-import ../logging/logger
 
 type
   ConnectionData* = object
@@ -35,7 +32,6 @@ proc enqueue*(queue: var ConnectionQueue, conn: ConnectionData): bool =
   acquire(queue.lock)
   defer: release(queue.lock)
   if queue.count >= queue.capacity:
-    log_warn("queue", "at capacity. releasing lock.")
     release(queue.lock)
     return false
   queue.buffer[queue.tail] = conn
@@ -49,7 +45,6 @@ proc dequeue*(queue: var ConnectionQueue): tuple[success: bool, data: Connection
   acquire(queue.lock)
   defer: release(queue.lock)
   if queue.count == 0:
-    log_warn("queue", "w/o connections. there is nothing to extract..")
     return (false, ConnectionData())
   result.data = queue.buffer[queue.head]
   queue.head  = (queue.head + 1) mod queue.capacity
