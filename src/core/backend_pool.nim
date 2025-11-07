@@ -24,17 +24,28 @@ proc add_backend*(pool: var BackendPool, host: string, port: int) =
   pool.backends.add(Backend(host: host, port: port, alive: true))
 
 proc get_next_backend*(pool: var BackendPool): Backend =
-  ## get next backend using round-robin algorithm
+  ## get: next alive backend using round-robin algorithm
   acquire(pool.lock)
   defer: release(pool.lock)
+  
   if pool.backends.len == 0:
     raise newException(ValueError, "no backends available")
-  # round-robin: cycle through backends
-  let backend        = pool.backends[pool.current_index]
-  let selected_index = pool.current_index
-  pool.current_index = (pool.current_index + 1) mod pool.backends.len
-  echo "[pool] selected backend index: ", selected_index, " -> ", backend.host, ":", backend.port, " (next: ", pool.current_index, ")"
-  return backend
+  
+  var attempts = 0
+  let max_attempts = pool.backends.len
+  
+  while attempts < max_attempts:
+    let backend = pool.backends[pool.current_index]
+    let selected_index = pool.current_index
+    pool.current_index = (pool.current_index + 1) mod pool.backends.len
+    
+    if backend.alive:
+      echo "[pool] selected backend index: ", selected_index, " -> ", backend.host, ":", backend.port, " (next: ", pool.current_index, ")"
+      return backend
+    
+    inc attempts
+  
+  raise newException(ValueError, "no alive backends available")
 
 proc backend_count*(pool: BackendPool): int =
   ## return number of backends in pool
