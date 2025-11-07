@@ -77,11 +77,17 @@ proc health_check_thread(arg: pointer) {.thread, gcsafe.} =
 
 proc start_health_checker*(pool: ptr BackendPool, running: ptr bool): Thread[pointer] =
   ## start: launch health checker thread
+  log_info("health", "allocating context")
   var ctx = cast[ptr HealthCheckerContext](alloc0(sizeof(HealthCheckerContext)))
+  log_info("health", "setting pool pointer")
   ctx.pool = pool
+  log_info("health", "setting running pointer")
   ctx.running = running
+  log_info("health", "setting check interval")
   ctx.check_interval = HEALTH_CHECK_INTERVAL
   
+  log_info("health", "creating thread")
   var thread: Thread[pointer]
   createThread(thread, health_check_thread, ctx)
+  log_info("health", "thread created successfully")
   return thread
