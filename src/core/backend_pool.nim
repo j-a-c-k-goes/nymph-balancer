@@ -11,7 +11,7 @@ type
   BackendPool* = object
     backends*: seq[Backend] # list of backend servers
     current_index: int      # current position for round-robin
-    lock: Lock              # thread-safe access
+    lock*: Lock             # thread-safe access
 
 proc init_backend_pool*(): BackendPool =
   ## initialize empty backend pool
