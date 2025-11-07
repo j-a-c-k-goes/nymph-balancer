@@ -38,17 +38,26 @@ proc health_check_thread(arg: pointer) {.thread, gcsafe.} =
   log_info("health", "health checker started")
   
   while checker.running[]:
-    for backend_index in 0..<checker.pool.backends.len:
+    acquire(checker.pool.lock)
+    let backend_count = checker.pool.backends.len
+    release(checker.pool.lock)
+    
+    for backend_index in 0..<backend_count:
+      acquire(checker.pool.lock)
       let backend = checker.pool.backends[backend_index]
+      release(checker.pool.lock)
+      
       let is_alive = probe_backend(backend.host, backend.port)
       
       if is_alive != backend.alive:
+        acquire(checker.pool.lock)
+        checker.pool.backends[backend_index].alive = is_alive
+        release(checker.pool.lock)
+        
         if is_alive:
           log_info("health", backend.host & ":" & $backend.port & " is now alive")
         else:
           log_warn("health", backend.host & ":" & $backend.port & " is now dead")
-        
-        checker.pool.backends[backend_index].alive = is_alive
     
     sleep(checker.check_interval)
 
